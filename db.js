@@ -20,10 +20,11 @@ dbService.prototype.connectToDb = function(callback) {
 }
 
 dbService.prototype.getAddress = function(callback) {
+  var self = this;
   var address = [];
   async.waterfall([
     function(callback) {
-      connectToDb(function(err,connection) {
+      self.connectToDb(function(err,connection) {
         if(err) {
           return callback(true,"Error establishing connection to the database.");
         }
