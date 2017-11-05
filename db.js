@@ -5,7 +5,7 @@ function dbService(config) {
   this.config = config;
 }
 
-function connectToDb(callback) {
+dbServicen.prototype.connectToDb = function(callback) {
   var self = this;
   var pool = mysql.createPool({
     host     : self.config.host,
@@ -19,7 +19,7 @@ function connectToDb(callback) {
   });
 }
 
-function getAddress(callback) {
+dbService.prototype.getAddress = function(callback) {
   var address = [];
   async.waterfall([
     function(callback) {
