@@ -38,7 +38,6 @@ MyService.prototype.start = function(callback) {
       return;
     }
   });
-  setImmediate(callback);
 };
 
 MyService.prototype.stop = function(callback) {
