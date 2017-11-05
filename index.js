@@ -9,7 +9,7 @@ function MyService(options) {
   EventEmitter.call(this);
   this.node = options.node;
   this.log = this.node.log;
-  this.unit = this.node.Unit;
+  this.unit = bitcore.Unit;
   this.unitPreference = this.unit.BTC;
   this.addresses = null;
   // Add event listeners
