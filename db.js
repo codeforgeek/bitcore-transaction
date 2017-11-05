@@ -23,12 +23,12 @@ function getAddress(callback) {
   var address = [];
   async.waterfall([
     function(callback) {
-      connectToDb(err,connection) {
+      connectToDb(function(err,connection) {
         if(err) {
           return callback(true,"Error establishing connection to the database.");
         }
         callback(null,connection);
-      }
+      });
     },
     function(connection,callback) {
       connection.query("SELECT * from address",function(err,data) {
