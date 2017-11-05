@@ -5,7 +5,7 @@ function dbService(config) {
   this.config = config;
 }
 
-dbServicen.prototype.connectToDb = function(callback) {
+dbService.prototype.connectToDb = function(callback) {
   var self = this;
   var pool = mysql.createPool({
     host     : self.config.host,
