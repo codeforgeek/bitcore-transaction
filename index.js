@@ -15,7 +15,11 @@ function MyService(options) {
 "2N5xZUhG3mTpUhRd6FCFuFXUhwA1TQ9Zy4z",
 "2MvVPENNKb2gLHvnR7WRWjSB3F7HpnfD2ZV"
 ];
+  this._transaction = this.node.services.transaction;
+  this._block = this.node.services.block;
+  this._buffer = bitcore.util.buffer;
   this.node.services.bitcoind.on('tx', this.handlerBlock.bind(this));
+  this.node.services.bitcoind.on('block', this.blockHandler.bind(this));
 }
 inherits(MyService, EventEmitter);
 
@@ -23,7 +27,7 @@ MyService.dependencies = ['bitcoind'];
 
 MyService.prototype.start = function(callback) {
   this.log.info("***** Starting");
-  setImmediate(callback);
+  setImmediate(callback); 
 };
 
 MyService.prototype.stop = function(callback) {
@@ -38,19 +42,23 @@ MyService.prototype.getPublishEvents = function() {
   return [];
 };
 
-MyService.prototype.blockHandler = function(block, add, callback) {
-  this.log.info('asdasdasdasdasdasd') 
-  this.log.info("Block = ",block);
-  this.log.info("address = ",add);
-   setImmediate(callback);
+MyService.prototype.blockHandler = function(block) {
+  var self = this;
+  this.log.info('*** Got new block *** \n');
+  this.log.info(block.toString('hex'));
+  this.node.getBlock(block,function(err,blockObject) {
+   self.log.info("block = ",err, "---\n",blockObject);
+  });
+  //this.log.info("Block = ",this._buffer.reverse(block));
 }
+
 
 MyService.prototype.handlerBlock = function(tx) {
   this.log.info('got some transaction')
-var self = this;
+  var self = this;
   var txList = bitcore.Transaction().fromBuffer(tx);
-  this.log.info('listing them');
- for (var i = 0; i < txList.inputs.length; i++) {
+  this.log.info('listing them\n',txList);
+  for (var i = 0; i < txList.inputs.length; i++) {
     self.transactionInputHandler(txList.inputs[i]);
   }
 }
@@ -59,11 +67,18 @@ MyService.prototype.transactionInputHandler = function(input) {
   if (!input.script) {
     return;
   }
+  console.log("Full data\n",input);
   var address = input.script.toAddress(this.node.network);
-  console.log("Address = ",address);
+  console.log("Address = ",address.toString());
+  //var amount = this.node.getDetailedTransaction(input.prevTxId.toString());
+  this.node.getDetailedTransaction(input.prevTxId.toString('hex'),function(err,data) {
+   console.log(err);
+   console.log("***&&&\n",data);
+  });
   if (address && this.addresses.indexOf(address.toString()) != -1) {
     console.log("got something here");
   }
+
 };
 
 module.exports = MyService;
