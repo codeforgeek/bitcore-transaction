@@ -2,6 +2,7 @@ var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 var bitcore = require('bitcore-lib');
 var mysql = require('mysql');
+var async = require('async');
 
 function MyService(options) {
   EventEmitter.call(this);
@@ -45,8 +46,8 @@ MyService.prototype.getPublishEvents = function() {
 MyService.prototype.blockHandler = function(block) {
   var self = this;
   this.log.info('*** Got new block *** \n');
-  this.log.info(block.toString('hex'));
-  this.node.getBlock(block,function(err,blockObject) {
+  //this.log.info(block.toString('hex'));
+  this.node.getBlock(block.toString('hex'),function(err,blockObject) {
    self.log.info("block = ",err, "---\n",blockObject);
   });
   //this.log.info("Block = ",this._buffer.reverse(block));
@@ -64,6 +65,7 @@ MyService.prototype.handlerBlock = function(tx) {
 }
 
 MyService.prototype.transactionInputHandler = function(input) {
+  var self = this;
   if (!input.script) {
     return;
   }
@@ -72,13 +74,15 @@ MyService.prototype.transactionInputHandler = function(input) {
   console.log("Address = ",address.toString());
   //var amount = this.node.getDetailedTransaction(input.prevTxId.toString());
   this.node.getDetailedTransaction(input.prevTxId.toString('hex'),function(err,data) {
-   console.log(err);
-   console.log("***&&&\n",data);
+   if(err) return;
+   console.log("Transaction Output:\n",data.outputs,"\n--------------------------");
+   data.outputs.map(function(singleOutput,index) {
+     console.log("Single Output:\n",singleOutput);
+     if (singleOutput.address && self.addresses.indexOf(singleOutput.address) != -1) {
+        console.log("got something here");
+      }
+   });
   });
-  if (address && this.addresses.indexOf(address.toString()) != -1) {
-    console.log("got something here");
-  }
-
 };
 
 module.exports = MyService;
