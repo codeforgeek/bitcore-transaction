@@ -35,7 +35,7 @@ dbService.prototype.getAddress = function(callback) {
       connection.query("SELECT * from address",function(err,data) {
         //release the connection to the pool
         connection.release();
-        if(err) return callback(true,"Error running the query");
+        if(err) console.log(err);return callback(true,"Error running the query");
         if(data.length > 0) {
           data.map(function(singleAddress,index) {
             address.push(singleAddress.address);
