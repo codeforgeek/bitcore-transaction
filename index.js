@@ -22,11 +22,11 @@ MyService.dependencies = ['bitcoind'];
 
 MyService.prototype.start = function(callback) {
   var self = this;
-  this.log.info("***** Starting ****");
+  self.log.info("***** Starting ****");
   // get the address to watch
   db.getAddress(function(err,data) {
     if(err) {
-      this.log.info(err);
+      self.log.info(err);
       self.stop();
       return;
     }
@@ -55,8 +55,8 @@ MyService.prototype.getPublishEvents = function() {
 
 MyService.prototype.blockHandler = function(block) {
   var self = this;
-  this.log.info('*** Got new block *** \n');
-  this.node.getBlock(block.toString('hex'),function(err,blockObject) {
+  self.log.info('*** Got new block *** \n');
+  self.node.getBlock(block.toString('hex'),function(err,blockObject) {
    self.log.info("block = ",err, "---\n",blockObject);
   });
 }
