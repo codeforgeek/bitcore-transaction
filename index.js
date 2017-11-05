@@ -23,10 +23,17 @@ MyService.dependencies = ['bitcoind'];
 MyService.prototype.start = function(callback) {
   var self = this;
   self.log.info("***** Starting ****");
+ /* self.addresses = [
+"2Mxs1sYMGh2dR5tHBLCMnhdjMim8Kvn88wW",
+"2MvVK98nuCj9TsPWJ855njDT733CKwpVdCw",
+"2N3xPEq3AiWXgW6QnyN15efaMqVPC1SBsTd",
+"2N5xZUhG3mTpUhRd6FCFuFXUhwA1TQ9Zy4z",
+"2MvVPENNKb2gLHvnR7WRWjSB3F7HpnfD2ZV"
+  ];*/
   // get the address to watch
   db.getAddress(function(err,data) {
     if(err) {
-      self.log.info(err);
+      self.log.info(err,data);
       self.stop();
       return;
     }
@@ -55,8 +62,12 @@ MyService.prototype.getPublishEvents = function() {
 MyService.prototype.blockHandler = function(block) {
   var self = this;
   self.log.info('*** Got new block *** \n');
-  self.node.getBlock(block.toString('hex'),function(err,blockObject) {
-   self.log.info("block = ",err, "---\n",blockObject);
+  self.node.getBlockHeader(block.toString('hex'),function(err,blockObject) {
+   if(err) {
+	self.log.info('Error getting block info');
+	return;
+   }
+   console.log("Block info = ",blockObject);
   });
 }
 
@@ -86,19 +97,24 @@ MyService.prototype.transactionInputHandler = function(input) {
    console.log("Transaction Output:\n",data.outputs,"\n--------------------------");
    data.outputs.map(function(singleOutput,index) {
      console.log("Single Output:\n",singleOutput);
+     //overwrite for testing
+     singleOutput.address = "2Mxs1sYMGh2dR5tHBLCMnhdjMim8Kvn88wW";
+     //***********
      // look for the address we got from db
      if (singleOutput.address && self.addresses.indexOf(singleOutput.address) != -1) {
         self.log.info("Got the matching address");
         // convert satoshi to btc
         value = self.unit.fromSatoshis(singleOutput.satoshis).to(self.unitPreference);
+        console.log("value = ",value);
         //push the satoshi amount in the array
         sum.push({"address": singleOutput.address, "satoshi": value});
       }
    });
    if(sum.length > 0) {
      // got some money,find the cumulative sum
-     sum.reduce(function(a,b,i) {
-       return cumulativeSum[i] = a+b;
+     var satoshis = sum.map(function(d,i) {return d.satoshi;});
+     satoshis.reduce(function(a,b,i) {
+       return cumulativeSum[i] = a + b;
      },0);
      self.log.info("Full Sequence of sum\n",cumulativeSum);
      self.log.info("Total amount: = ",cumulativeSum[cumulativeSum.length -1]);

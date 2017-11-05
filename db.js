@@ -2,20 +2,25 @@ var mysql = require('mysql');
 var async = require('async');
 
 function dbService(config) {
-  this.config = config;
-  this.pool = mysql.createPool({
+  var self = this;
+  self.config = config;
+  self.pool = mysql.createPool({
     host     : self.config.host,
     user     : self.config.user,
     password : self.config.password,
-    database : self.config.database
+    database : self.config.database,
+    connectionLimit : 100,
+    debug    :  false
   });
 }
 
 dbService.prototype.connectToDb = function(callback) {
   var self = this;
   self.pool.getConnection(function(err,connection) {
-    if(err) return callback(true,"Error establishing connection to the database pool");
-    callback(connection);
+    if(err) {
+      return callback(true,"Error establishing connection to the database pool\n"+err);
+    }
+    callback(null,connection);
   });
 }
 
@@ -31,11 +36,14 @@ dbService.prototype.getAddress = function(callback) {
         callback(null,connection);
       });
     },
-    function(connection,callback) {
-      connection.query("SELECT * from address",function(err,data) {
+    function(conn,callback) {
+      conn.query("select * from address",function(err,data) {
         //release the connection to the pool
-        connection.release();
-        if(err) console.log(err);return callback(true,"Error running the query");
+        conn.release();
+        if(err) {
+		console.log(err);
+		return callback(true,"Error running the query");
+	}
         if(data.length > 0) {
           data.map(function(singleAddress,index) {
             address.push(singleAddress.address);
