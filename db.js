@@ -3,17 +3,17 @@ var async = require('async');
 
 function dbService(config) {
   this.config = config;
-}
-
-dbService.prototype.connectToDb = function(callback) {
-  var self = this;
-  var pool = mysql.createPool({
+  this.pool = mysql.createPool({
     host     : self.config.host,
     user     : self.config.user,
     password : self.config.password,
     database : self.config.database
   });
-  pool.getConnection(function(err,connection) {
+}
+
+dbService.prototype.connectToDb = function(callback) {
+  var self = this;
+  self.pool.getConnection(function(err,connection) {
     if(err) return callback(true,"Error establishing connection to the database pool");
     callback(connection);
   });
