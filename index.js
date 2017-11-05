@@ -1,25 +1,19 @@
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 var bitcore = require('bitcore-lib');
-var mysql = require('mysql');
-var async = require('async');
+var config = require('./config');
+var dbService = require('./db');
+var db = new dbService(config);
 
 function MyService(options) {
   EventEmitter.call(this);
   this.node = options.node;
   this.log = this.node.log;
-  this.log.info("I am called");
-  this.addresses = [
-"2Mxs1sYMGh2dR5tHBLCMnhdjMim8Kvn88wW",
-"2MvVK98nuCj9TsPWJ855njDT733CKwpVdCw",
-"2N3xPEq3AiWXgW6QnyN15efaMqVPC1SBsTd",
-"2N5xZUhG3mTpUhRd6FCFuFXUhwA1TQ9Zy4z",
-"2MvVPENNKb2gLHvnR7WRWjSB3F7HpnfD2ZV"
-];
-  this._transaction = this.node.services.transaction;
-  this._block = this.node.services.block;
-  this._buffer = bitcore.util.buffer;
-  this.node.services.bitcoind.on('tx', this.handlerBlock.bind(this));
+  this.unit = this.node.Unit;
+  this.unitPreference = this.unit.BTC;
+  this.addresses = null;
+  // Add event listeners
+  this.node.services.bitcoind.on('tx', this.handleTransaction.bind(this));
   this.node.services.bitcoind.on('block', this.blockHandler.bind(this));
 }
 inherits(MyService, EventEmitter);
@@ -27,8 +21,24 @@ inherits(MyService, EventEmitter);
 MyService.dependencies = ['bitcoind'];
 
 MyService.prototype.start = function(callback) {
-  this.log.info("***** Starting");
-  setImmediate(callback); 
+  var self = this;
+  this.log.info("***** Starting ****");
+  // get the address to watch
+  db.getAddress(function(err,data) {
+    if(err) {
+      this.log.info(err);
+      self.stop();
+      return;
+    }
+    if(data.length > 0) {
+      self.addresses = data;
+    } else {
+      // no address to watch
+      self.stop();
+      return;
+    }
+  });
+  setImmediate(callback);
 };
 
 MyService.prototype.stop = function(callback) {
@@ -46,15 +56,12 @@ MyService.prototype.getPublishEvents = function() {
 MyService.prototype.blockHandler = function(block) {
   var self = this;
   this.log.info('*** Got new block *** \n');
-  //this.log.info(block.toString('hex'));
   this.node.getBlock(block.toString('hex'),function(err,blockObject) {
    self.log.info("block = ",err, "---\n",blockObject);
   });
-  //this.log.info("Block = ",this._buffer.reverse(block));
 }
 
-
-MyService.prototype.handlerBlock = function(tx) {
+MyService.prototype.handleTransaction = function(tx) {
   this.log.info('got some transaction')
   var self = this;
   var txList = bitcore.Transaction().fromBuffer(tx);
@@ -66,6 +73,8 @@ MyService.prototype.handlerBlock = function(tx) {
 
 MyService.prototype.transactionInputHandler = function(input) {
   var self = this;
+  var sum = [];
+  var cumulativeSum = [];
   if (!input.script) {
     return;
   }
@@ -78,10 +87,23 @@ MyService.prototype.transactionInputHandler = function(input) {
    console.log("Transaction Output:\n",data.outputs,"\n--------------------------");
    data.outputs.map(function(singleOutput,index) {
      console.log("Single Output:\n",singleOutput);
+     // look for the address we got from db
      if (singleOutput.address && self.addresses.indexOf(singleOutput.address) != -1) {
-        console.log("got something here");
+        self.log.info("Got the matching address");
+        // convert satoshi to btc
+        value = self.unit.fromSatoshis(singleOutput.satoshis).to(self.unitPreference);
+        //push the satoshi amount in the array
+        sum.push({"address": singleOutput.address, "satoshi": value});
       }
    });
+   if(sum.length > 0) {
+     // got some money,find the cumulative sum
+     sum.reduce(function(a,b,i) {
+       return cumulativeSum[i] = a+b;
+     },0);
+     self.log.info("Full Sequence of sum\n",cumulativeSum);
+     self.log.info("Total amount: = ",cumulativeSum[cumulativeSum.length -1]);
+   }
   });
 };
 
